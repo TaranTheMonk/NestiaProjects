@@ -9,6 +9,15 @@ import pandas as pd
 class ModulePattern():
     def __init__(self, moduleName):
         self.moduleName = moduleName
+        self.modulePattern = None
+
+    def getModulePattern(self, moduleName):
+        return
+
+def defineModulePatterns():
+    return
+
+
 
 def getSystemArgs():
     print('Number of arguments:', len(sys.argv), 'arguments.')
@@ -27,13 +36,18 @@ def oneMoreDay(previousDay):
     Future = datetime.strftime(datetime.fromtimestamp(previousValue), "%Y-%m-%d")
     return Future
 
-
-
 def main():
+    validPattern = re.compile('[0-9A-Za-z/-]{36,36}|[0-9a-z]{12,16}')
     startDate, stopDate, moduleName = getSystemArgs()
     while startDate != stopDate:
         with open(os.path.expanduser('~/nestia_logs_with_parameters/data-' + startDate +'.csv'), 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
+            try:
+                for row in reader:
+                    if validPattern.search(row[5]):
+                        a = 1
+            except:
+                print()
 
-
-main()
+if __name__ == '__main__':
+    main()
