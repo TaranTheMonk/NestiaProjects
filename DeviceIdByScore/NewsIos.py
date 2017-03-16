@@ -5,6 +5,7 @@ import os
 import sys
 import time
 from datetime import datetime
+import json
 
 class UserProfile():
     def __init__(self, deviceId, totalDays):
@@ -38,14 +39,19 @@ class TimeFunctions():
         startValue = time.mktime(time.strptime(startDate, "%Y-%m-%d"))
         stopValue = time.mktime(time.strptime(stopDate, "%Y-%m-%d"))
         intervalDays = (stopValue - startValue)/(24*60*60)
-        return intervalDays
+        return int(intervalDays)
 
 def main(startDate, stopDate):
+    validIdPattern = re.compile('[0-9A-Za-z/-]{36,36}')
+    with open('OffNotificationList.json', 'r', encoding='utf-8') as f:
+        validIdSet = set(json.load(f))
+    f.close()
     newsPattern = re.compile('/news/\d+$')
+    validIdPattern = re.compile('[0-9A-Za-z/-]{36,36}')
     intervalDays = TimeFunctions.computeIntervalDays(startDate, stopDate)
     outputDict = dict()
     output = list()
-    headers = []
+    headers = ['DeviceId', 'CountDays']
     currentDate = startDate
     dayNum = 0
     while currentDate != stopDate:
@@ -54,11 +60,12 @@ def main(startDate, stopDate):
         with open(path, 'r', encoding='utf-8') as f:
             reader = csv.reader(line.replace('\0','') for line in f)
             for row in reader:
-                if not row[5] in outputDict.keys():
-                    outputDict[row[5]] = UserProfile(row[5], intervalDays)
-                if newsPattern.search(row[1]):
-                    outputDict[row[5]].tempCounter4News += 1
-                    outputDict[row[5]].setCountFlagTrue()
+                if validIdPattern.match(row[5]):
+                    if not row[5] in outputDict.keys():
+                        outputDict[row[5]] = UserProfile(row[5], intervalDays)
+                    if newsPattern.search(row[1]):
+                        outputDict[row[5]].tempCounter4News += 1
+                        outputDict[row[5]].setCountFlagTrue()
             f.close()
             for deviceId in outputDict.keys():
                 tempTarget = outputDict[deviceId]
@@ -70,12 +77,13 @@ def main(startDate, stopDate):
                 else:
                     continue
         print(currentDate)
+        dayNum += 1
         currentDate = TimeFunctions.oneMoreDay(currentDate)
 
     for deviceId in outputDict.keys():
         tempTarget = outputDict[deviceId]
-        if tempTarget.countDays >= 10:
-            output.append([deviceId] + tempTarget.newsRecord)
+        output.append([deviceId] + [tempTarget.countDays] + tempTarget.newsRecord)
+    output = list(filter(lambda row: row[0] in validIdSet, output))
 
     output = pd.DataFrame(output)
     output.columns = headers
